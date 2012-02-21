@@ -12,43 +12,45 @@
 #include <stdlib.h>
 #include <assert.h>
 
-#define ALPHABET_SIZE 255
-struct NFAState_t {
-    // TODO
+#include "utlist.h"
+
+#define ALPHABET_SIZE 128
+
+typedef struct NFAState {
+    struct NFAState *transitions[ALPHABET_SIZE];
     int is_final;
-};
+    struct NFAState *next; // so that transitions can be a linked list
+                           // transitions[0] is a list of states to which it
+                           // can go
+} NFAState;
 
-typedef struct NFAState_t NFAState;
-
-struct DFAState_t {
-    DFAState_t *transition[ALPHABET_SIZE]; // yes it's a colossal waste of space, 0 position is a epsilon transition
+typedef struct DFAState_t {
+    struct DFAState *transitions[ALPHABET_SIZE]; // yes it's a colossal waste of space, 0 position is a epsilon transition
     int is_final;
-};
+} DFAState;
 
-typedef struct DFAState_t DFAState;
-
-NFAState NFAState_create()
+NFAState *NFAState_create()
 {
-    NFAState state = (NFAState) malloc(sizeof(NFAState_t));
-    // TODO
-    state->is_final = false;
+    NFAState *state = (NFAState*) malloc(sizeof(NFAState));
+    //state->transitions = (NFAState **) calloc(ALPHABET_SIZE, sizeof(NFAState*));
+    state->is_final = 0;
     return state;
 }
 
-void NFAState_delete(NFAState state)
+void NFAState_delete(NFAState *state)
 {
     free(state);
 }
 
-DFAState DFAState_create()
+DFAState *DFAState_create()
 {
-    DFAState state = (DFAState) malloc(sizeof(DFAState_t));
-    memset(state->transition, 0, sizeof(DFAState_t)*ALPHABET_SIZE);
-    state->is_final = false;
+    DFAState *state = (DFAState*) malloc(sizeof(DFAState));
+    //state->transitions = (DFAState **) calloc(ALPHABET_SIZE, sizeof(DFAState*));
+    state->is_final = 0;
     return state;
 }
 
-void DFAState_delete(DFAState state)
+void DFAState_delete(DFAState *state)
 {
     free(state);
 }
