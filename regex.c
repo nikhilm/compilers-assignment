@@ -64,8 +64,9 @@ int main(int argc, char **argv)
 
     char *pattern = argv[1];
     NFAState *start_nfa = thompson(pattern);
-    graphviz(start_nfa);
-    DFAState *start_dfa = nfa_to_dfa(start_nfa);
-    graphviz(start_dfa);
+    start_nfa = 0;
+    //graphviz(start_nfa);
+    //DFAState start_dfa = nfa_to_dfa(start_nfa);
+    //graphviz(start_dfa);
     return 0;
 }
