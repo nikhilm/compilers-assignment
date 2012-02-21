@@ -3,9 +3,13 @@
  *
  * This program accepts a regular expression as the first argument
  * and prints out a equivalent NFA and DFA. (Graphviz?)
+ * NOTE: Does not understand escape characters
+ *
+ * TODO: add support for escaping
  */
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <assert.h>
 
 #define ALPHABET_SIZE 255
