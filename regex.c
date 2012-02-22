@@ -11,6 +11,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <ctype.h>
 
 #include "utlist.h"
 
@@ -312,10 +313,30 @@ void dot_node(NFAState *node)
 void dot_edge(NFAState *from, NFAState *to, char label)
 {
     printf("node%d -> node%d [label=", from->dot_name, to->dot_name);
-    if (label == '\0')
+    if (label == '\0') {
         printf("epsilon");
-    else
+    }
+    else if(isspace(label)) {
+        switch (label) {
+            case ' ':
+                printf("sp");
+                break;
+            case '\t':
+                printf("tab");
+                break;
+            case '\n':
+                printf("nl");
+                break;
+            case '\r':
+                printf("cr");
+                break;
+            default:
+                printf("whitespace");
+        }
+    }
+    else {
         printf("%c", label);
+    }
     printf("]\n");
 }
 
