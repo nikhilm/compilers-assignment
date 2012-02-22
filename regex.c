@@ -74,6 +74,11 @@ postfix_expr *postfix_expr_create(char value)
     return item;
 }
 
+void postfix_expr_delete(postfix_expr *exp)
+{
+    free(exp);
+}
+
 postfix_expr * push_op(postfix_expr *output, postfix_expr *opstack, char op)
 {
     // handle duplicate '.'
@@ -164,12 +169,14 @@ StartAndEnd single(char value)
     end->is_final = 1;
     StartAndEnd d = { .start = start, .end = end };
 
-    NFAState *s1 = NFAState_create();
-    NFAState *s2 = NFAState_create();
-    LL_PREPEND(start->transitions[0], s1);
-    LL_PREPEND(s1->transitions[(int)value], s2);
-    LL_PREPEND(s2->transitions[0], end);
+    // this is the canonical form, but far too many states
+    //NFAState *s1 = NFAState_create();
+    //NFAState *s2 = NFAState_create();
+    //LL_PREPEND(start->transitions[0], s1);
+    //LL_PREPEND(s1->transitions[(int)value], s2);
+    //LL_PREPEND(s2->transitions[0], end);
 
+    LL_PREPEND(start->transitions[(int)value], end);
     return d;
 }
 
@@ -193,7 +200,8 @@ StartAndEnd union_(StartAndEnd one, StartAndEnd two)
 
 StartAndEnd concat(StartAndEnd one, StartAndEnd two)
 {
-    NFAState *start = NFAState_create();
+    // canonical implementation
+    /*NFAState *start = NFAState_create();
     NFAState *end = NFAState_create();
     end->is_final = 1;
     StartAndEnd d = { .start = start, .end = end };
@@ -202,8 +210,11 @@ StartAndEnd concat(StartAndEnd one, StartAndEnd two)
 
     LL_PREPEND(start->transitions[0], one.start);
     LL_PREPEND(one.end->transitions[0], two.start);
-    LL_PREPEND(two.end->transitions[0], end);
+    LL_PREPEND(two.end->transitions[0], end);*/
 
+    one.end->is_final = 0;
+    LL_PREPEND(one.end->transitions[0], two.start);
+    StartAndEnd d = { .start = one.start, .end = two.end };
     return d;
 }
 
