@@ -19,6 +19,7 @@
 typedef struct NFAState {
     struct NFAState *transitions[ALPHABET_SIZE];
     int is_final;
+    int dot_name; // DOT graph node name
     struct NFAState *next; // so that transitions can be a linked list
                            // transitions[0] is a list of states to which it
                            // can go
@@ -27,6 +28,7 @@ typedef struct NFAState {
 typedef struct DFAState_t {
     struct DFAState *transitions[ALPHABET_SIZE]; // yes it's a colossal waste of space, 0 position is a epsilon transition
     int is_final;
+    int dot_name; // DOT graph node name
 } DFAState;
 
 NFAState *NFAState_create()
@@ -34,6 +36,7 @@ NFAState *NFAState_create()
     NFAState *state = (NFAState*) malloc(sizeof(NFAState));
     //state->transitions = (NFAState **) calloc(ALPHABET_SIZE, sizeof(NFAState*));
     state->is_final = 0;
+    state->dot_name = 0;
     return state;
 }
 
@@ -47,6 +50,7 @@ DFAState *DFAState_create()
     DFAState *state = (DFAState*) malloc(sizeof(DFAState));
     //state->transitions = (DFAState **) calloc(ALPHABET_SIZE, sizeof(DFAState*));
     state->is_final = 0;
+    state->dot_name = 0;
     return state;
 }
 
@@ -238,7 +242,6 @@ NFAState *thompson(const char *pattern)
     NFAStack *stack = NULL;
     NFAStack *new_top = NULL;
     LL_FOREACH(p, el) {
-        fprintf(stderr, "> %c\n", el->value);
         switch (el->value) {
             case '*':
                 assert(stack);
@@ -275,6 +278,52 @@ NFAState *thompson(const char *pattern)
     return stack->nfa.start;
 }
 
+/******************
+ * DOT generation *
+ *****************/
+int dot_name_counter = 0;
+void dot_node(NFAState *node)
+{
+    if (node->dot_name == 0) {
+        node->dot_name = ++dot_name_counter;
+        printf("node%d [shape=%s,label=%d];\n", node->dot_name, node->is_final ? "doublecircle" : "circle", node->dot_name);
+    }
+    // we've already output this node, skip
+}
+
+void dot_edge(NFAState *from, NFAState *to, char label)
+{
+    printf("node%d -> node%d [label=", from->dot_name, to->dot_name);
+    if (label == '\0')
+        printf("epsilon");
+    else
+        printf("%c", label);
+    printf("]\n");
+}
+
+void dot_nfa_rec(NFAState *state)
+{
+    dot_node(state);
+    int i;
+    for (i = 0; i < ALPHABET_SIZE; ++i) {
+        if (state->transitions[i]) {
+            dot_node(state->transitions[i]);
+            dot_edge(state, state->transitions[i], (char) i);
+            dot_nfa_rec(state->transitions[i]);
+        }
+    }
+}
+
+void dot_nfa(NFAState *start)
+{
+    printf("digraph nfa {\nsize=\"16,16\";\n");
+    // fake start node
+    printf("nodestart [shape=point,label=Start];\n");
+    dot_nfa_rec(start);
+    printf("nodestart -> node%d [label=epsilon];\n", start->dot_name);
+    printf("}\n");
+}
+
 int main(int argc, char **argv)
 {
     if (argc < 2) {
@@ -284,8 +333,7 @@ int main(int argc, char **argv)
 
     char *pattern = argv[1];
     NFAState *start_nfa = thompson(pattern);
-    start_nfa = 0;
-    //graphviz(start_nfa);
+    dot_nfa(start_nfa);
     //DFAState start_dfa = nfa_to_dfa(start_nfa);
     //graphviz(start_dfa);
     return 0;
