@@ -20,6 +20,7 @@ typedef struct NFAState {
     struct NFAState *transitions[ALPHABET_SIZE];
     int is_final;
     int dot_name; // DOT graph node name
+    int visited;
     struct NFAState *next; // so that transitions can be a linked list
                            // transitions[0] is a list of states to which it
                            // can go
@@ -37,6 +38,7 @@ NFAState *NFAState_create()
     //state->transitions = (NFAState **) calloc(ALPHABET_SIZE, sizeof(NFAState*));
     state->is_final = 0;
     state->dot_name = 0;
+    state->visited = 0;
     return state;
 }
 
@@ -317,13 +319,17 @@ void dot_edge(NFAState *from, NFAState *to, char label)
 
 void dot_nfa_rec(NFAState *state)
 {
+    fprintf(stderr, "dot_nfa_rec: %d\n", state->dot_name);
+    if (state->visited)
+        return;
     dot_node(state);
+    state->visited = 1;
     int i;
     for (i = 0; i < ALPHABET_SIZE; ++i) {
-        if (state->transitions[i]) {
-            dot_node(state->transitions[i]);
-            dot_edge(state, state->transitions[i], (char) i);
-            dot_nfa_rec(state->transitions[i]);
+        NFAState *each;
+        LL_FOREACH(state->transitions[i], each) {
+            dot_nfa_rec(each);
+            dot_edge(state, each, (char) i);
         }
     }
 }
