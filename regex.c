@@ -93,6 +93,13 @@ postfix_expr * push_op(postfix_expr *output, postfix_expr *opstack, char op)
             LL_DELETE(opstack, opstack);
         }
     }
+    else if (op == '|') {
+        while (opstack && (opstack->value == '*' || opstack->value == '.')) {
+            postfix_expr *ch = postfix_expr_create(opstack->value);
+            DL_APPEND(output, ch);
+            LL_DELETE(opstack, opstack);
+        }
+    }
 
     postfix_expr *ch = postfix_expr_create(op);
     LL_PREPEND(opstack, ch);
