@@ -93,6 +93,10 @@ postfix_expr * push_op(postfix_expr *output, postfix_expr *opstack, char op)
             LL_DELETE(opstack, opstack);
         }
     }
+    // TODO there are concatenation problems all over here somewhere :(
+    if (op == '.' && opstack && opstack->value == '.')
+        return opstack;
+
     postfix_expr *ch = postfix_expr_create(op);
     LL_PREPEND(opstack, ch);
     return opstack;
@@ -105,9 +109,6 @@ postfix_expr * postfix(const char *infix)
     postfix_expr *opstack = NULL; // its a stack so use it that way, opstack is always the TOP
 
     int prev_was_op = 0;
-
-    postfix_expr *epsilon = postfix_expr_create('\0');
-    DL_APPEND(output, epsilon);
 
     while (*infix != '\0') {
         switch (*infix) {
@@ -152,6 +153,17 @@ postfix_expr * postfix(const char *infix)
         postfix_expr *ch = postfix_expr_create(opstack->value);
         DL_APPEND(output, ch);
         LL_DELETE(opstack, opstack);
+    }
+
+    postfix_expr *epsilon = postfix_expr_create('\0');
+    DL_PREPEND(output, epsilon);
+
+    postfix_expr *tail;
+    for (tail = output; tail->next; tail = tail->next)
+        ;
+    if (tail->value != '.') {
+        postfix_expr *cat = postfix_expr_create('.');
+        DL_APPEND(output, cat);
     }
 
     return output;
@@ -254,11 +266,25 @@ NFAStack *NFAStack_create(StartAndEnd value)
 NFAState *thompson(const char *pattern)
 {
     postfix_expr *p = postfix(pattern);
+    postfix_expr *end;
+    for (end = p; end->next; end = end->next)
+        ;
+
+    // get rid of the first empty epsilon
+    /*if (p->value == '\0' && end->value == '.') {
+        postfix_expr *ep = p;
+        DL_DELETE(p, ep);
+        DL_DELETE(p, end);
+        postfix_expr_delete(ep);
+        postfix_expr_delete(end);
+        end = NULL;
+    }*/
     postfix_expr *el;
 
     NFAStack *stack = NULL;
     NFAStack *new_top = NULL;
     LL_FOREACH(p, el) {
+        fprintf(stderr, "> %c\n", el->value);
         switch (el->value) {
             case '*':
                 assert(stack);
