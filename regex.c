@@ -17,25 +17,27 @@
 #define ALPHABET_SIZE 128
 
 typedef struct NFAState {
-    struct NFAState *transitions[ALPHABET_SIZE];
+    struct NFAState *transitions[ALPHABET_SIZE]; // yes it's a colossal waste of space,
+                                                 // 0 position is a epsilon transition
     int is_final;
     int dot_name; // DOT graph node name
-    int visited;
+    int visited;  // DOT rendering visited?
     struct NFAState *next; // so that transitions can be a linked list
                            // transitions[0] is a list of states to which it
                            // can go
 } NFAState;
 
 typedef struct DFAState_t {
-    struct DFAState *transitions[ALPHABET_SIZE]; // yes it's a colossal waste of space, 0 position is a epsilon transition
+    struct DFAState *transitions[ALPHABET_SIZE]; // yes it's a colossal waste of space,
+                                                 // 0 position is a epsilon transition
     int is_final;
     int dot_name; // DOT graph node name
+    int visited;  // DOT rendering visited?
 } DFAState;
 
 NFAState *NFAState_create()
 {
     NFAState *state = (NFAState*) malloc(sizeof(NFAState));
-    //state->transitions = (NFAState **) calloc(ALPHABET_SIZE, sizeof(NFAState*));
     state->is_final = 0;
     state->dot_name = 0;
     state->visited = 0;
@@ -50,7 +52,6 @@ void NFAState_delete(NFAState *state)
 DFAState *DFAState_create()
 {
     DFAState *state = (DFAState*) malloc(sizeof(DFAState));
-    //state->transitions = (DFAState **) calloc(ALPHABET_SIZE, sizeof(DFAState*));
     state->is_final = 0;
     state->dot_name = 0;
     return state;
