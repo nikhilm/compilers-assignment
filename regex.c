@@ -98,6 +98,9 @@ postfix_expr * postfix(const char *infix)
 
     int prev_was_op = 0;
 
+    postfix_expr *epsilon = postfix_expr_create('\0');
+    DL_APPEND(output, epsilon);
+
     while (*infix != '\0') {
         switch (*infix) {
             case '*':
