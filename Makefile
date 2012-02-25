@@ -6,3 +6,6 @@ assn2: simplec.l
 
 assn1: regex.c
 	gcc -g -Wall -o $@ $<
+
+clean:
+	rm -rf assn1 assn1.dSYM nfa.png assn2 assn2.dSYM simplec.yy.c
