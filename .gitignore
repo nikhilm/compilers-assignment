@@ -3,3 +3,5 @@
 *.swp
 assn1
 *.o
+assn2
+*.yy.c
