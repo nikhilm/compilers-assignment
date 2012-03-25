@@ -571,7 +571,71 @@ void dot_nfa(NFAState *start)
     // fake start node
     printf("nodestart [shape=point,label=Start];\n");
     dot_nfa_rec(start);
-    printf("nodestart -> node%d [label=epsilon];\n", start->dot_name);
+    printf("nodestart -> node%d [label=Start];\n", start->dot_name);
+    printf("}\n");
+}
+
+void dot_dfa_node(DFAState *node)
+{
+    if (node->dot_name == 0) {
+        node->dot_name = ++dot_name_counter;
+        printf("node%d [shape=%s,label=%d];\n", node->dot_name, node->is_final ? "doublecircle" : "circle", node->dot_name);
+    }
+    // we've already output this node, skip
+}
+
+// output a DOT description of a transition
+void dot_dfa_edge(DFAState *from, DFAState *to, char label)
+{
+    printf("node%d -> node%d [label=", from->dot_name, to->dot_name);
+    if (label == '\0') {
+        printf("epsilon");
+    }
+    else if(isspace(label)) {
+        switch (label) {
+            case ' ':
+                printf("sp");
+                break;
+            case '\t':
+                printf("tab");
+                break;
+            case '\n':
+                printf("nl");
+                break;
+            case '\r':
+                printf("cr");
+                break;
+            default:
+                printf("whitespace");
+        }
+    }
+    else {
+        printf("%c", label);
+    }
+    printf("]\n");
+}
+void dot_dfa_rec(DFAState *state)
+{
+    if (state->visited)
+        return;
+    dot_dfa_node(state);
+    state->visited = 1;
+    int i;
+    for (i = 0; i < ALPHABET_SIZE; ++i) {
+        if (state->transitions[i] != NULL) {
+            dot_dfa_rec(state->transitions[i]);
+            dot_dfa_edge(state, state->transitions[i], (char) i);
+        }
+    }
+}
+
+void dot_dfa(DFAState *start)
+{
+    printf("digraph dfa {\nsize=\"16,16\";\n");
+    // fake start node
+    printf("nodestart [shape=point,label=Start];\n");
+    dot_dfa_rec(start);
+    printf("nodestart -> node%d [label=Start];\n", start->dot_name);
     printf("}\n");
 }
 
