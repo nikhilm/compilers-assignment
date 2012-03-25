@@ -57,7 +57,7 @@ typedef struct NFAState {
 // and so needs some way to hold various states in it
 typedef struct DFAState_t {
     struct DFAState *transitions[ALPHABET_SIZE]; // yes it's a colossal waste of space,
-    NFAState nfa_states[NO_OF_STATES];
+    NFAState *nfa_states[NO_OF_STATES];
     int no_of_nfa_states;                                                 // 0 position is a epsilon transition
     int is_final;
     int dot_name; // DOT graph node name
@@ -214,8 +214,6 @@ typedef struct StartAndEnd {
     NFAState *end;
 } StartAndEnd;
 
-int inputs(ALPHABET_SIZE);
-int no_of_inputs = 0;
 // epsilon -> char -> epsilon
 StartAndEnd single(char value)
 {
@@ -291,6 +289,8 @@ StartAndEnd star(StartAndEnd one)
     return d;
 }
 
+int inputs[ALPHABET_SIZE];
+int no_of_inputs = 0;
 void add_to_input(char value)
 {
     int i;
@@ -375,7 +375,7 @@ NFAState *thompson(const char *pattern)
 int find_closure(DFAState *dfa_node)
 {
    NFAState *n;
-   NFAState *nfa_node
+   NFAState *nfa_node;
    int i;
    for( i = 0; i < dfa_node->no_of_nfa_states;i++)
    {
@@ -385,25 +385,25 @@ int find_closure(DFAState *dfa_node)
        {
            if(n != NULL)
            {
-               dfa_node->nfa_states[no_of_nfa_states] = n;
+               dfa_node->nfa_states[dfa_node->no_of_nfa_states] = n;
                dfa_node->no_of_nfa_states++;
-               find_closure(dfa_node, n);
+               //find_closure(dfa_node);
             }
            else
-               return 0;
+               break;
         }
     }
    return 1;
 }
 
-DFAState add_states(DFAState *node)
+void add_states(DFAState *node)
 {
-    int i,j,x;
+    int i,j,x,input;
     NFAState *n;
     for( i = 0; i < no_of_inputs; i++)
     {
         input = inputs[i];
-        x = node->no_of_nfa_states
+        x = node->no_of_nfa_states;
         for( j = 0; j < x; j++)
         {
             LL_FOREACH( node->nfa_states[j]->transitions[input], n)
@@ -418,6 +418,7 @@ DFAState add_states(DFAState *node)
             }
         }
     }
+}
 
 
 typedef struct DFAStack {
@@ -428,16 +429,16 @@ typedef struct DFAStack {
 DFAStack *DFAStack_create(DFAState *dfa)
 {
     DFAStack *item = (DFAStack*) malloc(sizeof(DFAStack));
-    item->dfa = value;
+    item->dfa = dfa;
     return item;
 }
 
-DFAState nfa_to_dfa(NFAState *nfa_start)
+DFAState *nfa_to_dfa(NFAState *nfa_start)
 {
     DFAStack *stack = NULL;
     DFAStack *top = NULL;
     DFAStack *new_states = NULL;
-    DFAStack *new_top = NULL:
+    DFAStack *new_top = NULL;
     DFAState *start = DFAState_create();
     //DFAState *end = DFAState_create();
     //end->is_final = 1;
@@ -446,24 +447,25 @@ DFAState nfa_to_dfa(NFAState *nfa_start)
     find_closure(start);
     new_top =  DFAStack_create(start);
     LL_PREPEND(new_states, new_top);
-    int i,j,x;
+    int i,j,x,input;
+    DFAStack *dfastack_node;
     NFAState *n;
-    LL_FOREACH(new_states, n)
+    LL_FOREACH(new_states, dfastack_node)
     {
         for( i = 0; i < no_of_inputs; i++)
         {
             DFAState *new_state = DFAState_create();
             input = inputs[i];
-            x = n->no_of_nfa_states
+            x = dfastack_node->dfa->no_of_nfa_states;
             for( j = 0; j < x; j++)
             {
-                LL_FOREACH( n->nfa_states[j]->transitions[input], n)
+                LL_FOREACH( dfastack_node->dfa->nfa_states[j]->transitions[input], n)
                 {
                     if( n == NULL )
                         break;
                     else
                     {
-                        new_state->nfa_states[node->no_of_nfa_states] = n;
+                        new_state->nfa_states[new_state->no_of_nfa_states] = n;
                         new_state->no_of_nfa_states++;
                     }
                 }
@@ -471,7 +473,8 @@ DFAState nfa_to_dfa(NFAState *nfa_start)
             find_closure(new_state);
         }
         add_states(start); 
-
+    }
+    return start;
 }
 
 /******************
@@ -565,7 +568,7 @@ int main(int argc, char **argv)
     char *pattern = argv[1];
     NFAState *start_nfa = thompson(pattern);
     dot_nfa(start_nfa);
-    DFAState start_dfa = nfa_to_dfa(start_nfa);
+    DFAState *start_dfa = nfa_to_dfa(start_nfa);
     //graphviz(start_dfa);
     return 0;
 }
