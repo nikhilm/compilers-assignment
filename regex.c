@@ -397,7 +397,7 @@ int find_closure(DFAState *dfa_node)
    return 1;
 }
 
-void add_states(DFAState *node)
+/*void add_states(DFAState *node)
 {
     int i,j,x,input;
     NFAState *n;
@@ -419,9 +419,10 @@ void add_states(DFAState *node)
             }
         }
     }
-}
+}*/
 
-int compare(DFAStack *stack, DFAState *new_state)
+
+int exist(DFAStack *stack, DFAState *new_state)
 {
     DFAStack *node;
     int found = 1;
@@ -504,17 +505,17 @@ DFAState *nfa_to_dfa(NFAState *nfa_start)
                 }
             }
             find_closure(new_state);
-            int exist = compare(stack, new_state);
+            int exist = exist(stack, new_state);
             if(exist == 0)
             {
-                LL_PREPEND(new_states, new_state);
+                DFAStack *new_stack_node = DFAStack_create(new_state);
+                LL_PREPEND(new_states, new_stack_node);
             }
             else
                 DFAState_delete(new_state);
 
         }
-       //LL_DELETE(new_states, dfastack_node); 
-        add_states(start); 
+       LL_DELETE(new_states, dfastack_node); 
     }
     return start;
 }
