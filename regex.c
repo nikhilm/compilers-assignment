@@ -55,12 +55,13 @@ typedef struct NFAState {
 // it probably isn't supposed to look like this
 // since a DFAState hold's an amalgamation of NFAStates
 // and so needs some way to hold various states in it
-typedef struct DFAState_t {
+typedef struct DFAState {
     struct DFAState *transitions[ALPHABET_SIZE]; // yes it's a colossal waste of space,
     NFAState *nfa_states[NO_OF_STATES];
     int no_of_nfa_states;                                                 // 0 position is a epsilon transition
     int is_final;
     int dot_name; // DOT graph node name
+    struct DFAState *next; // so that transitions can be a linked list
     int visited;  // DOT rendering visited?
 } DFAState;
 
@@ -420,6 +421,36 @@ void add_states(DFAState *node)
     }
 }
 
+int compare(DFAStack *stack, DFAState *new_state)
+{
+    DFAStack *node;
+    int found = 1;
+    LL_FOREACH(stack, node)
+    {
+        found = 1;
+        if(node->dfa->no_of_nfa_states == new_state->no_of_nfa_states)
+        {
+            int i,j;
+            for( i = 0; i < new_state->no_of_nfa_states; i++)
+            {
+                for( j = 0; j < node->dfa->no_of_nfa_states; j++)
+                {
+                    if(node->dfa->nfa_states[j] == new_state->nfa_states[i])
+                    {
+                  //      found = 1;
+                        break;
+                    }
+                }
+                if( j == new_state->no_of_nfa_states)
+                    break; 
+            }
+            if( i == new_state->no_of_nfa_states)
+                return 1;
+
+        }
+    }
+    return 0;
+}
 
 typedef struct DFAStack {
     DFAState *dfa; 
@@ -452,10 +483,12 @@ DFAState *nfa_to_dfa(NFAState *nfa_start)
     NFAState *n;
     LL_FOREACH(new_states, dfastack_node)
     {
+        LL_PREPEND(stack, dfastack_node);
         for( i = 0; i < no_of_inputs; i++)
         {
             DFAState *new_state = DFAState_create();
             input = inputs[i];
+            LL_PREPEND(dfastack_node->dfa->transitions[input], new_state);
             x = dfastack_node->dfa->no_of_nfa_states;
             for( j = 0; j < x; j++)
             {
@@ -471,7 +504,16 @@ DFAState *nfa_to_dfa(NFAState *nfa_start)
                 }
             }
             find_closure(new_state);
+            int exist = compare(stack, new_state);
+            if(exist == 0)
+            {
+                LL_PREPEND(new_states, new_state);
+            }
+            else
+                DFAState_delete(new_state);
+
         }
+       //LL_DELETE(new_states, dfastack_node); 
         add_states(start); 
     }
     return start;
