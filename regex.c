@@ -58,10 +58,10 @@ typedef struct NFAState {
 typedef struct DFAState {
     struct DFAState *transitions[ALPHABET_SIZE]; // yes it's a colossal waste of space,
     NFAState *nfa_states[NO_OF_STATES];
-    int no_of_nfa_states;                                                 // 0 position is a epsilon transition
+    int no_of_nfa_states;
     int is_final;
     int dot_name; // DOT graph node name
-    struct DFAState *next; // so that transitions can be a linked list
+    struct DFAState *next; // so that marked/unmarked can be a linked list
     int visited;  // DOT rendering visited?
 } DFAState;
 
@@ -88,12 +88,19 @@ DFAState *DFAState_create()
     state->no_of_nfa_states = 0;
     state->is_final = 0;
     state->dot_name = 0;
+    state->visited = 0;
     return state;
 }
 
 void DFAState_delete(DFAState *state)
 {
     free(state);
+}
+
+void DFAState_add_nfa_state(DFAState *state, NFAState *add)
+{
+    assert(state->no_of_nfa_states < NO_OF_STATES);
+    state->nfa_states[state->no_of_nfa_states++] = add;
 }
 
 /*************************************
@@ -291,21 +298,18 @@ StartAndEnd star(StartAndEnd one)
     return d;
 }
 
-int inputs[ALPHABET_SIZE];
+char inputs[ALPHABET_SIZE];
 int no_of_inputs = 0;
 void add_to_input(char value)
 {
     int i;
     for( i = 0; i < no_of_inputs; i++)
     {
-        if(inputs[i] == (int)value)
-            break;
+        if(inputs[i] == value)
+            return;
     }
-    if( i == no_of_inputs )
-    {
-        inputs[no_of_inputs] = (int)value;
-        no_of_inputs++;
-    }
+    inputs[no_of_inputs] = value;
+    no_of_inputs++;
 }
 
 // this is used to convert a postfix expression
@@ -379,145 +383,114 @@ int find_closure(DFAState *dfa_node)
    NFAState *n;
    NFAState *nfa_node;
    int i;
-   for( i = 0; i < dfa_node->no_of_nfa_states;i++)
+   for( i = 0; i < dfa_node->no_of_nfa_states; i++)
    {
        nfa_node = dfa_node->nfa_states[i];
 
        LL_FOREACH(nfa_node->transitions[0], n)
        {
-           if(n != NULL)
-           {
-               dfa_node->nfa_states[dfa_node->no_of_nfa_states] = n;
-               dfa_node->no_of_nfa_states++;
-               //find_closure(dfa_node);
-            }
-           else
-               break;
-        }
+           DFAState_add_nfa_state(dfa_node, n);
+       }
     }
    return 1;
 }
 
-/*void add_states(DFAState *node)
+int same_state(DFAState *stateA, DFAState *stateB)
 {
-    int i,j,x,input;
-    NFAState *n;
-    for( i = 0; i < no_of_inputs; i++)
-    {
-        input = inputs[i];
-        x = node->no_of_nfa_states;
-        for( j = 0; j < x; j++)
-        {
-            LL_FOREACH( node->nfa_states[j]->transitions[input], n)
-            {
-                if( n == NULL )
-                    break;
-                else
-                {
-                    node->nfa_states[node->no_of_nfa_states] = n;
-                    node->no_of_nfa_states++;
-                }
+    if (stateA->no_of_nfa_states != stateB->no_of_nfa_states)
+        return 0;
+
+    int i, j;
+    for (i = 0; i < stateA->no_of_nfa_states; i++) {
+        NFAState *nfaState = stateA->nfa_states[i];
+        int inB = 0;
+        for (j = 0; j < stateB->no_of_nfa_states; j++) {
+            if (nfaState == stateB->nfa_states[j]) {
+                inB = 1;
+                break;
             }
         }
+
+        if (!inB)
+            return 0;
     }
-}*/
-
-
-typedef struct DFAStack {
-    DFAState *dfa; 
-    struct DFAStack *next;
-} DFAStack;
-
-int exist(DFAStack *stack, DFAState *new_state)
-{
-    DFAStack *node;
-    int found = 1;
-    LL_FOREACH(stack, node)
-    {
-        found = 1;
-        if(node->dfa->no_of_nfa_states == new_state->no_of_nfa_states)
-        {
-            int i,j;
-            for( i = 0; i < new_state->no_of_nfa_states; i++)
-            {
-                for( j = 0; j < node->dfa->no_of_nfa_states; j++)
-                {
-                    if(node->dfa->nfa_states[j] == new_state->nfa_states[i])
-                    {
-                  //      found = 1;
-                        break;
-                    }
-                }
-                if( j == new_state->no_of_nfa_states)
-                    break; 
-            }
-            if( i == new_state->no_of_nfa_states)
-                return 1;
-
-        }
-    }
-    return 0;
+    return 1;
 }
 
-DFAStack *DFAStack_create(DFAState *dfa)
+DFAState *exists(DFAState *states, DFAState *new_state)
 {
-    DFAStack *item = (DFAStack*) malloc(sizeof(DFAStack));
-    item->dfa = dfa;
-    return item;
+    DFAState *state;
+    LL_FOREACH(states, state)
+    {
+        if (same_state(state, new_state)) {
+            return state;
+        }
+    }
+    return NULL;
 }
 
 DFAState *nfa_to_dfa(NFAState *nfa_start)
 {
-    DFAStack *stack = NULL;
-    DFAStack *top = NULL;
-    DFAStack *new_states = NULL;
-    DFAStack *new_top = NULL;
+    DFAState *unmarked = NULL;
+    DFAState *marked = NULL;
     DFAState *start = DFAState_create();
-    //DFAState *end = DFAState_create();
-    //end->is_final = 1;
-    start->nfa_states[start->no_of_nfa_states] = nfa_start;
-    start->no_of_nfa_states++;
+    DFAState_add_nfa_state(start, nfa_start);
     find_closure(start);
-    new_top =  DFAStack_create(start);
-    LL_PREPEND(new_states, new_top);
-    int i,j,x,input;
-    DFAStack *dfastack_node;
+    int k;
+    for (k = 0; k < start->no_of_nfa_states; k++) {
+        if (start->nfa_states[k]->is_final) {
+            start->is_final = 1;
+            break;
+        }
+    }
+
+    LL_PREPEND(unmarked, start);
+
+    int i,j,x;
     NFAState *n;
-    LL_FOREACH(new_states, dfastack_node)
-    {
-        LL_PREPEND(stack, dfastack_node);
+    while (unmarked != NULL) {
+        DFAState *first = unmarked;
+        LL_DELETE(unmarked, first);
+        // mark the state
+        LL_PREPEND(marked, first);
         for( i = 0; i < no_of_inputs; i++)
         {
+            char input = inputs[i];
+
             DFAState *new_state = DFAState_create();
-            input = inputs[i];
-            LL_PREPEND(dfastack_node->dfa->transitions[input], new_state);
-            x = dfastack_node->dfa->no_of_nfa_states;
+            x = first->no_of_nfa_states;
             for( j = 0; j < x; j++)
             {
-                LL_FOREACH( dfastack_node->dfa->nfa_states[j]->transitions[input], n)
+                LL_FOREACH( first->nfa_states[j]->transitions[(int)input], n)
                 {
-                    if( n == NULL )
-                        break;
-                    else
-                    {
-                        new_state->nfa_states[new_state->no_of_nfa_states] = n;
-                        new_state->no_of_nfa_states++;
-                    }
+                    DFAState_add_nfa_state(new_state, n);
                 }
             }
             find_closure(new_state);
-            int exist = exist(stack, new_state);
-            if(exist == 0)
-            {
-                DFAStack *new_stack_node = DFAStack_create(new_state);
-                LL_PREPEND(new_states, new_stack_node);
+            int k;
+            for (k = 0; k < new_state->no_of_nfa_states; k++) {
+                if (new_state->nfa_states[k]->is_final) {
+                    new_state->is_final = 1;
+                    break;
+                }
             }
-            else
+
+            DFAState *existing = exists(unmarked, new_state);
+            if (!existing)
+                existing = exists(marked, new_state);
+
+            if (existing) {
                 DFAState_delete(new_state);
+                first->transitions[(int)input] = existing;
+            }
+            else {
+                LL_PREPEND(unmarked, new_state);
+                first->transitions[(int)input] = new_state;
+            }
 
         }
-       LL_DELETE(new_states, dfastack_node); 
     }
+
     return start;
 }
 
