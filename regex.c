@@ -169,7 +169,8 @@ postfix_expr * postfix(const char *infix)
                 prev_was_op = 1;
                 break;
             case '(':
-                opstack = push_op(output, opstack, '.');
+                if (!prev_was_op)
+                    opstack = push_op(output, opstack, '.');
                 opstack = push_op(output, opstack, '(');
                 prev_was_op = 1;
                 break;
