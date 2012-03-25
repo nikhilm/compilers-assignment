@@ -641,15 +641,29 @@ void dot_dfa(DFAState *start)
 
 int main(int argc, char **argv)
 {
+    int output_dfa = 0;
+    if (argc >= 2 && strcmp(argv[1], "--dfa") == 0) {
+        output_dfa = 1;
+        int i;
+        for (i = 1; i < argc-1; i++)
+            argv[i] = argv[i+1];
+        argc--;
+    }
+
     if (argc < 2) {
-        fprintf(stderr, "Usage: %s <pattern>\n", argv[0]);
+        fprintf(stderr, "Usage: %s [--dfa] <pattern>\n", argv[0]);
         return 1;
     }
 
     char *pattern = argv[1];
     NFAState *start_nfa = thompson(pattern);
-    dot_nfa(start_nfa);
-    DFAState *start_dfa = nfa_to_dfa(start_nfa);
-    //graphviz(start_dfa);
+
+    if (output_dfa) {
+        DFAState *start_dfa = nfa_to_dfa(start_nfa);
+        dot_dfa(start_dfa);
+    }
+    else {
+        dot_nfa(start_nfa);
+    }
     return 0;
 }
