@@ -18,6 +18,10 @@ Usage:
     ./assn1 '<regex>'
     # OR to generate a nice image
     ./assn1 '<regex>' | dot -Tpng -o output.png
+    # for dfa
+    ./assn1 --dfa '<regex>'
+    # OR
+    ./assn1 --dfa '<regex>' | dot -Tpng -o output.png
 
 You will need the [graphviz](http://graphviz.org) package installed for the dot
 command to be available.
